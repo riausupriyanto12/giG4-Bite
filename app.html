@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>giG4-Bite — Transaksi</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="topbar">
+    <div class="brand">🍃 giG4-Bite</div>
+    <div class="user-chip">
+      <span id="userNama">-</span>
+      <span class="role-badge" id="userRole">-</span>
+      <button class="btn-icon" id="btnLogout" title="Keluar">⎋</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="session-banner">
+      <span class="tag">● SESI ISTIRAHAT AKTIF</span>
+      <h1 id="greeting">Selamat Bertugas! 👋</h1>
+      <p id="tanggalHariIni">-</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Total Penjualan</div>
+        <div class="value" id="statPenjualan">Rp0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Barang Terjual</div>
+        <div class="value" id="statTerjual">0 pcs</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Produk Siap Jual</div>
+        <div class="value" id="statProduk">0</div>
+      </div>
+      <div class="stat-card warn">
+        <div class="label">Stok Menipis</div>
+        <div class="value" id="statMenipis">0</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="transaksi">🛒 Transaksi</button>
+      <button class="tab-btn" data-tab="riwayat">📋 Riwayat</button>
+    </div>
+
+    <!-- ============ TAB: TRANSAKSI ============ -->
+    <div id="tabTransaksi">
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="Ketik nama makanan...">
+      </div>
+      <div class="category-strip" id="categoryStrip">
+        <button class="chip active" data-cat="all">Semua</button>
+      </div>
+      <div class="product-grid" id="productGrid"></div>
+      <div class="empty-state hidden" id="emptyKatalog">Tidak ada produk yang cocok.</div>
+    </div>
+
+    <!-- ============ TAB: RIWAYAT ============ -->
+    <div id="tabRiwayat" class="hidden">
+      <div class="riwayat-list" id="riwayatList"></div>
+      <div class="empty-state hidden" id="emptyRiwayat">Belum ada transaksi hari ini.</div>
+    </div>
+
+  </div>
+
+  <div class="bottom-dock">
+    <button class="dock-undo" id="btnUndo">↩ Batalkan Tap</button>
+    <button class="dock-close" id="btnTutup">🔒 TUTUP TRANSAKSI</button>
+  </div>
+
+</div>
+
+<!-- ============ MODAL: TUTUP TRANSAKSI & REKONSILIASI ============ -->
+<div class="modal-overlay hidden" id="modalTutup">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <div>
+        <h2>Tutup Sesi &amp; Rekonsiliasi Kasir</h2>
+        <p id="modalSubtitle">Sesi Istirahat • -</p>
+      </div>
+      <button class="btn-icon" id="btnCloseModal">✕</button>
+    </div>
+
+    <div class="summary-box">
+      <div class="row"><span class="label">Total Item Terjual</span><span class="val" id="ringkasanItem">0 pcs</span></div>
+      <div class="row" style="margin-bottom:0"><span class="label">Total Omset Sistem</span><span class="val" id="ringkasanOmset">Rp0</span></div>
+    </div>
+
+    <div class="field-cash">
+      <label style="font-size:12px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:.4rem;">Uang Fisik Kasir (Hasil Hitung Manual)</label>
+      <input type="number" id="inputUangFisik" placeholder="0" inputmode="numeric">
+    </div>
+
+    <div id="rekonResultBox"></div>
+
+    <div id="vendorRincianBox">
+      <p style="font-size:12px;font-weight:700;color:var(--on-surface-variant);margin:0 0 .3rem;">RINCIAN HAK PEDAGANG</p>
+      <div id="vendorRincianList"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" id="btnBatalModal">Batal</button>
+      <button class="btn-primary" id="btnSimpanRekon" style="flex:2">Kunci Sesi &amp; Simpan Rekonsiliasi</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
