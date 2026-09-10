@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  if (Session_.token) { window.location.href = 'app.html'; return; }
+  if (Session_.token) { window.location.href = Session_.role === 'admin' ? 'admin.html' : 'app.html'; return; }
 
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
       Session_.token = json.data.token;
       Session_.nama = json.data.nama;
       Session_.role = json.data.role;
-      window.location.href = 'app.html';
+      window.location.href = json.data.role === 'admin' ? 'admin.html' : 'app.html';
     } catch (err) {
       showToast(err.message || 'Login gagal.', 'error');
       btn.disabled = false;

@@ -318,3 +318,54 @@ input { font-family: inherit; }
   background: var(--surface-container-lowest); font-weight: 700; font-size: 13px; color: var(--on-surface-variant);
 }
 .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* ---------- ADMIN: TABS STRIP (scrollable, banyak menu) ---------- */
+.tabs-strip { display: flex; gap: .5rem; overflow-x: auto; padding-bottom: .5rem; margin-bottom: 1rem; }
+.tabs-strip .tab-btn { flex: 0 0 auto; padding: 0 1rem; white-space: nowrap; }
+
+/* ---------- ADMIN: STAT GRID ---------- */
+.admin-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; margin-bottom: 1.25rem; }
+@media (min-width: 720px) { .admin-stats { grid-template-columns: repeat(4, 1fr); } }
+
+/* ---------- ADMIN: TOOLBAR ---------- */
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-bottom: .9rem; flex-wrap: wrap; }
+.toolbar h2 { font-size: 16px; margin: 0; }
+.btn-add {
+  height: 40px; padding: 0 1rem; border-radius: var(--radius-sm);
+  background: var(--primary); color: #fff; border: none; font-weight: 700; font-size: 13px;
+}
+
+/* ---------- ADMIN: TABLE ---------- */
+.table-wrap { overflow-x: auto; background: var(--surface-container-lowest); border: 1px solid var(--outline-variant); border-radius: var(--radius-md); }
+table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.data-table th {
+  text-align: left; padding: .65rem .8rem; background: var(--slate-surface);
+  font-size: 11px; font-weight: 700; color: var(--slate-text-muted); text-transform: uppercase;
+  border-bottom: 1px solid var(--outline-variant); white-space: nowrap;
+}
+table.data-table td { padding: .65rem .8rem; border-bottom: 1px solid var(--outline-variant); vertical-align: middle; }
+table.data-table tr:last-child td { border-bottom: none; }
+.pill { display: inline-flex; padding: 2px 9px; border-radius: var(--radius-full); font-size: 11px; font-weight: 700; }
+.pill.aktif { background: var(--status-available-bg); color: var(--status-available); }
+.pill.nonaktif { background: var(--status-empty-bg); color: var(--status-empty); }
+.pill.selisih { background: var(--status-low-bg); color: var(--status-low); }
+.pill.sesuai { background: var(--status-available-bg); color: var(--status-available); }
+.link-btn { background: none; border: none; color: var(--tertiary); font-weight: 600; font-size: 12px; padding: 0; }
+.link-btn + .link-btn { margin-left: .6rem; }
+
+/* ---------- ADMIN: FORM MODAL ---------- */
+.form-field { margin-bottom: .9rem; }
+.form-field label { display: block; font-size: 12px; font-weight: 600; color: var(--on-surface-variant); margin-bottom: .35rem; }
+.form-field input, .form-field select, .form-field textarea {
+  width: 100%; height: 44px; border-radius: var(--radius-sm);
+  border: 1px solid var(--slate-border); padding: 0 .8rem; font-size: 14px; background: var(--slate-surface);
+}
+.form-field textarea { height: auto; padding: .6rem .8rem; resize: vertical; }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.helper-text { font-size: 11px; color: var(--slate-text-muted); margin-top: .3rem; }
+
+.date-range-bar { display: flex; gap: .6rem; align-items: flex-end; margin-bottom: 1.1rem; flex-wrap: wrap; }
+.date-range-bar .form-field { margin-bottom: 0; flex: 1; min-width: 140px; }
+.date-range-bar button { height: 44px; padding: 0 1.1rem; border-radius: var(--radius-sm); background: var(--primary); color: #fff; border: none; font-weight: 700; font-size: 13px; }
+
+.empty-row td { text-align: center; color: var(--slate-text-muted); padding: 1.5rem; }
