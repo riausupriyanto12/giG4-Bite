@@ -57,6 +57,86 @@ function bindEvents() {
   document.getElementById('btnCloseModalForm').addEventListener('click', closeModalForm);
   document.getElementById('btnBatalModalForm').addEventListener('click', closeModalForm);
   document.getElementById('btnGantiPassword').addEventListener('click', openFormGantiPassword);
+  document.getElementById('btnTambahAkun').addEventListener('click', () => openFormAkun(null));
+}
+
+// ============================================================
+// AKUN
+// ============================================================
+async function refreshAkun() {
+  try {
+    const res = await apiGet('getAkunList');
+    const body = document.getElementById('akunBody');
+    body.innerHTML = res.data.length ? res.data.map(u => `
+      <tr>
+        <td>${escapeHtmlA(u.nama)}</td>
+        <td>${escapeHtmlA(u.username)}</td>
+        <td><span class="pill ${u.role === 'admin' ? 'sesuai' : 'aktif'}">${u.role === 'admin' ? 'Admin' : 'Petugas'}</span></td>
+        <td><span class="pill ${u.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${u.status}</span></td>
+        <td>
+          <button class="link-btn" onclick='openFormAkun(${JSON.stringify(u)})'>Edit</button>
+          <button class="link-btn" onclick='openFormResetPassword(${JSON.stringify(u)})'>Reset Password</button>
+          ${u.status === 'Aktif'
+            ? `<button class="link-btn" style="color:var(--error)" onclick="toggleStatusAkun('${u.id}','${escapeHtmlA(u.nama)}','${u.role}','Nonaktif')">Nonaktifkan</button>`
+            : `<button class="link-btn" onclick="toggleStatusAkun('${u.id}','${escapeHtmlA(u.nama)}','${u.role}','Aktif')">Aktifkan</button>`}
+        </td>
+      </tr>`).join('') : emptyRow(5, 'Belum ada akun.');
+  } catch (e) { /* noop */ }
+}
+
+function openFormAkun(akun) {
+  openFormModal({
+    title: akun ? 'Edit Akun' : 'Tambah Akun Petugas',
+    customHtml: `
+      <div class="form-field"><label>Nama Lengkap</label><input type="text" id="fAkunNama" value="${akun ? escapeHtmlA(akun.nama) : ''}"></div>
+      <div class="form-field"><label>Username</label><input type="text" id="fAkunUsername" value="${akun ? escapeHtmlA(akun.username) : ''}" ${akun ? 'disabled style="background:var(--surface-container);"' : ''}></div>
+      <div class="form-field"><label>Role</label>
+        <select id="fAkunRole">
+          <option value="petugas" ${akun && akun.role === 'petugas' ? 'selected' : ''}>Petugas</option>
+          <option value="admin" ${akun && akun.role === 'admin' ? 'selected' : ''}>Admin</option>
+        </select>
+      </div>
+      ${!akun ? `<div class="form-field"><label>Password Awal (min. 6 karakter)</label><input type="password" id="fAkunPasswordAwal"></div>` : ''}
+    `,
+    onSubmit: async () => {
+      const payload = {
+        id: akun ? akun.id : undefined,
+        nama: document.getElementById('fAkunNama').value.trim(),
+        username: document.getElementById('fAkunUsername').value.trim(),
+        role: document.getElementById('fAkunRole').value
+      };
+      if (!akun) payload.password_awal = document.getElementById('fAkunPasswordAwal').value;
+      await apiPost('simpanAkun', payload);
+      showToast(akun ? 'Akun diperbarui.' : 'Akun baru dibuat.');
+      closeModalForm();
+      refreshAkun();
+    }
+  });
+}
+
+function openFormResetPassword(akun) {
+  openFormModal({
+    title: `Reset Password — ${akun.nama}`,
+    customHtml: `
+      <p class="helper-text" style="margin-bottom:.9rem;">Password baru berlaku langsung. Sampaikan ke ${escapeHtmlA(akun.nama)} secara langsung/rahasia, jangan lewat chat publik.</p>
+      <div class="form-field"><label>Password Baru (min. 6 karakter)</label><input type="password" id="fResetPasswordBaru"></div>
+    `,
+    onSubmit: async () => {
+      const baru = document.getElementById('fResetPasswordBaru').value;
+      if (baru.length < 6) { showToast('Password baru minimal 6 karakter.', 'error'); return; }
+      await apiPost('resetPasswordAkun', { id: akun.id, password_baru: baru });
+      showToast('Password berhasil direset.');
+      closeModalForm();
+    }
+  });
+}
+
+async function toggleStatusAkun(id, nama, role, status) {
+  try {
+    await apiPost('simpanAkun', { id: id, nama: nama, username: '-', role: role, status: status });
+    showToast(status === 'Aktif' ? 'Akun diaktifkan.' : 'Akun dinonaktifkan.');
+    refreshAkun();
+  } catch (e) { /* noop */ }
 }
 
 function openFormGantiPassword() {
@@ -90,7 +170,8 @@ const TAB_LOADERS = {
   barangmasuk: refreshBarangMasukTab,
   laporan: refreshLaporan,
   kas: refreshKas,
-  riwayat: refreshAudit
+  riwayat: refreshAudit,
+  akun: refreshAkun
 };
 
 const TAB_ELEMENT_IDS = {
@@ -101,7 +182,8 @@ const TAB_ELEMENT_IDS = {
   barangmasuk: 'tabBarangMasuk',
   laporan: 'tabLaporan',
   kas: 'tabKas',
-  riwayat: 'tabRiwayatPerubahan'
+  riwayat: 'tabRiwayatPerubahan',
+  akun: 'tabAkun'
 };
 
 function switchTab(tab) {
