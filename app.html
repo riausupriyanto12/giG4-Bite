@@ -15,6 +15,7 @@
     <div class="user-chip">
       <span id="userNama">-</span>
       <span class="role-badge" id="userRole">-</span>
+      <button class="btn-icon" id="btnGantiPassword" title="Ganti Password">🔑</button>
       <button class="btn-icon" id="btnLogout" title="Keluar">⎋</button>
     </div>
   </div>
@@ -109,6 +110,23 @@
     <div class="modal-actions">
       <button class="btn-secondary" id="btnBatalModal">Batal</button>
       <button class="btn-primary" id="btnSimpanRekon" style="flex:2">Kunci Sesi &amp; Simpan Rekonsiliasi</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: GANTI PASSWORD ============ -->
+<div class="modal-overlay hidden" id="modalGantiPassword">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <div><h2>Ganti Password</h2></div>
+      <button class="btn-icon" id="btnCloseGantiPassword">✕</button>
+    </div>
+    <div class="form-field"><label>Password Lama</label><input type="password" id="gpLama"></div>
+    <div class="form-field"><label>Password Baru (min. 6 karakter)</label><input type="password" id="gpBaru"></div>
+    <div class="form-field"><label>Ulangi Password Baru</label><input type="password" id="gpKonfirmasi"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="btnBatalGantiPassword">Batal</button>
+      <button class="btn-primary" id="btnSimpanGantiPassword" style="flex:2">Simpan</button>
     </div>
   </div>
 </div>

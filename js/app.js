@@ -44,6 +44,42 @@ function bindEvents() {
   document.getElementById('btnBatalModal').addEventListener('click', closeModalTutup);
   document.getElementById('btnSimpanRekon').addEventListener('click', handleSimpanRekonsiliasi);
   document.getElementById('inputUangFisik').addEventListener('input', updateRekonPreview);
+
+  document.getElementById('btnGantiPassword').addEventListener('click', () => {
+    document.getElementById('gpLama').value = '';
+    document.getElementById('gpBaru').value = '';
+    document.getElementById('gpKonfirmasi').value = '';
+    document.getElementById('modalGantiPassword').classList.remove('hidden');
+  });
+  document.getElementById('btnCloseGantiPassword').addEventListener('click', closeGantiPassword);
+  document.getElementById('btnBatalGantiPassword').addEventListener('click', closeGantiPassword);
+  document.getElementById('btnSimpanGantiPassword').addEventListener('click', handleGantiPassword);
+}
+
+function closeGantiPassword() {
+  document.getElementById('modalGantiPassword').classList.add('hidden');
+}
+
+async function handleGantiPassword() {
+  const lama = document.getElementById('gpLama').value;
+  const baru = document.getElementById('gpBaru').value;
+  const konfirmasi = document.getElementById('gpKonfirmasi').value;
+
+  if (!lama || !baru) { showToast('Isi semua kolom.', 'error'); return; }
+  if (baru.length < 6) { showToast('Password baru minimal 6 karakter.', 'error'); return; }
+  if (baru !== konfirmasi) { showToast('Konfirmasi password tidak cocok.', 'error'); return; }
+
+  const btn = document.getElementById('btnSimpanGantiPassword');
+  btn.disabled = true;
+  try {
+    await apiPost('gantiPassword', { password_lama: lama, password_baru: baru });
+    showToast('Password berhasil diganti.');
+    closeGantiPassword();
+  } catch (e) {
+    /* toast sudah tampil */
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function switchTab(tab) {

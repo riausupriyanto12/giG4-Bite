@@ -56,6 +56,30 @@ function bindEvents() {
 
   document.getElementById('btnCloseModalForm').addEventListener('click', closeModalForm);
   document.getElementById('btnBatalModalForm').addEventListener('click', closeModalForm);
+  document.getElementById('btnGantiPassword').addEventListener('click', openFormGantiPassword);
+}
+
+function openFormGantiPassword() {
+  openFormModal({
+    title: 'Ganti Password',
+    customHtml: `
+      <div class="form-field"><label>Password Lama</label><input type="password" id="gpLama"></div>
+      <div class="form-field"><label>Password Baru (min. 6 karakter)</label><input type="password" id="gpBaru"></div>
+      <div class="form-field"><label>Ulangi Password Baru</label><input type="password" id="gpKonfirmasi"></div>
+    `,
+    onSubmit: async () => {
+      const lama = document.getElementById('gpLama').value;
+      const baru = document.getElementById('gpBaru').value;
+      const konfirmasi = document.getElementById('gpKonfirmasi').value;
+      if (!lama || !baru) { showToast('Isi semua kolom.', 'error'); return; }
+      if (baru.length < 6) { showToast('Password baru minimal 6 karakter.', 'error'); return; }
+      if (baru !== konfirmasi) { showToast('Konfirmasi password tidak cocok.', 'error'); return; }
+
+      await apiPost('gantiPassword', { password_lama: lama, password_baru: baru });
+      showToast('Password berhasil diganti.');
+      closeModalForm();
+    }
+  });
 }
 
 const TAB_LOADERS = {
