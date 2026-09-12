@@ -336,15 +336,23 @@ function openFormProduk(produk) {
         </select>
       </div>
       <div class="form-field" id="fVendorWrap"><label>Pedagang</label><select id="fVendor">${vendorOptions}</select></div>
+      <div class="form-field">
+        <label>Link Foto Google Drive (opsional)</label>
+        <input type="text" id="fFotoLink" placeholder="Tempel link share Google Drive di sini" value="${produk && produk.image_url ? escapeHtmlA(produk.image_url) : ''}" oninput="previewFotoProduk()">
+        <img id="fFotoPreview" style="display:none;max-width:110px;border-radius:8px;margin-top:.5rem;border:1px solid var(--outline-variant);">
+        <p class="helper-text" id="fFotoStatus">Cara: upload foto ke Drive → klik kanan → Share → ubah jadi "Anyone with the link" (Viewer) → Copy link → tempel di sini. Kosongkan kalau tidak ada foto (pakai gambar bawaan).</p>
+      </div>
     `,
     onSubmit: async () => {
       const pemilik = document.getElementById('fPemilik').value;
+      const fotoInput = document.getElementById('fFotoLink').value.trim();
       await apiPost('simpanProduk', {
         id: produk ? produk.id : undefined,
         nama_produk: document.getElementById('fNamaProduk').value.trim(),
         kategori_id: document.getElementById('fKategori').value,
         pemilik_type: pemilik,
-        vendor_id: pemilik === 'pedagang' ? document.getElementById('fVendor').value : ''
+        vendor_id: pemilik === 'pedagang' ? document.getElementById('fVendor').value : '',
+        image_url: buildDriveImageUrl(fotoInput)
       });
       showToast('Produk tersimpan.');
       closeModalForm();
@@ -357,6 +365,21 @@ function openFormProduk(produk) {
   };
   document.getElementById('fPemilik').addEventListener('change', togglePemilik);
   togglePemilik();
+  if (produk && produk.image_url) previewFotoProduk();
+}
+
+function previewFotoProduk() {
+  const input = document.getElementById('fFotoLink');
+  const img = document.getElementById('fFotoPreview');
+  const status = document.getElementById('fFotoStatus');
+  const value = input.value.trim();
+
+  if (!value) { img.style.display = 'none'; return; }
+
+  const url = buildDriveImageUrl(value);
+  img.onload = () => { img.style.display = 'block'; status.textContent = '✓ Foto ditemukan dan bisa tampil.'; status.style.color = 'var(--status-available)'; };
+  img.onerror = () => { img.style.display = 'none'; status.textContent = '⚠ Foto tidak bisa dimuat — cek lagi izin share-nya sudah "Anyone with the link"?'; status.style.color = 'var(--error)'; };
+  img.src = url;
 }
 
 async function toggleStatusProduk(id, status) {
@@ -364,7 +387,8 @@ async function toggleStatusProduk(id, status) {
   try {
     await apiPost('simpanProduk', {
       id: id, nama_produk: p.nama_produk, kategori_id: p.kategori_id,
-      pemilik_type: p.pemilik_type, vendor_id: p.vendor_id, status: status
+      pemilik_type: p.pemilik_type, vendor_id: p.vendor_id, status: status,
+      image_url: p.image_url || ''
     });
     showToast(status === 'Aktif' ? 'Produk diaktifkan.' : 'Produk dinonaktifkan.');
     refreshProduk();
@@ -643,6 +667,25 @@ function closeModalForm() {
 // ============================================================
 // UTIL
 // ============================================================
+// ============================================================
+// UTIL
+// ============================================================
+function buildDriveImageUrl(input) {
+  if (!input) return '';
+  // Sudah berupa URL siap pakai (bukan link share Drive) — biarkan apa adanya
+  if (/^https?:\/\/(lh3\.googleusercontent\.com|drive\.google\.com\/thumbnail)/.test(input)) return input;
+
+  // Ekstrak FILE_ID dari berbagai format link share Google Drive
+  let fileId = null;
+  let m = input.match(/\/d\/([a-zA-Z0-9_-]{15,})/);
+  if (m) fileId = m[1];
+  if (!fileId) { m = input.match(/[?&]id=([a-zA-Z0-9_-]{15,})/); if (m) fileId = m[1]; }
+  if (!fileId && /^[a-zA-Z0-9_-]{15,}$/.test(input)) fileId = input; // sudah berupa FILE_ID saja
+
+  if (!fileId) return input; // fallback — anggap sudah URL gambar biasa (mis. dari internet)
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w600`;
+}
+
 function emptyRow(colspan, text) {
   return `<tr class="empty-row"><td colspan="${colspan}">${text}</td></tr>`;
 }
