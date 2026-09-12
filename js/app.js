@@ -207,22 +207,23 @@ function placeholderImg(nama) {
 
 // ============================================================
 // TAP PRODUK — update kartu terkait saja (bukan full re-render)
+// Kunci PER-PRODUK (bukan global) — tap produk lain tetap responsif
+// walau tap sebelumnya masih diproses server.
 // ============================================================
-let tapLock = false;
+const produkSedangDiproses = new Set();
+
 async function handleTap(productId) {
-  if (tapLock) return;
+  if (produkSedangDiproses.has(productId)) return; // cegah dobel-tap produk YANG SAMA
   const item = katalog.find(p => p.id === productId);
   if (!item || item.status_stok === 'Habis') return;
 
-  tapLock = true;
+  produkSedangDiproses.add(productId);
   const clientEventId = `${Session_.token}-${productId}-${Date.now()}`;
-  const cardEl = document.querySelector(`.product-card[data-id="${productId}"]`);
-  cardEl && cardEl.classList.add('just-tapped');
 
-  // optimistic update lokal
+  // optimistic update lokal — langsung terasa responsif
   item.stok -= 1;
   item.terjual_hari_ini += 1;
-  updateCardInPlace(item);
+  updateCardInPlace(item, true);
 
   try {
     await apiPost('tapProduk', { product_id: productId, client_event_id: clientEventId });
@@ -231,14 +232,15 @@ async function handleTap(productId) {
     // rollback jika gagal
     item.stok += 1;
     item.terjual_hari_ini -= 1;
-    updateCardInPlace(item);
+    updateCardInPlace(item, false);
   } finally {
-    tapLock = false;
-    setTimeout(() => cardEl && cardEl.classList.remove('just-tapped'), 250);
+    produkSedangDiproses.delete(productId);
+    const cardEl = document.querySelector(`.product-card[data-id="${productId}"]`);
+    if (cardEl) { cardEl.classList.remove('processing'); setTimeout(() => cardEl.classList.remove('just-tapped'), 250); }
   }
 }
 
-function updateCardInPlace(item) {
+function updateCardInPlace(item, sedangDiproses) {
   if (item.stok <= 0) item.status_stok = 'Habis';
   else if (item.stok <= 5) item.status_stok = 'Menipis';
   else item.status_stok = 'Tersedia';
@@ -254,6 +256,7 @@ function updateCardInPlace(item) {
     temp.innerHTML = outerHtml;
     const newCard = temp.firstElementChild;
     newCard.addEventListener('click', () => handleTap(item.id));
+    if (sedangDiproses) newCard.classList.add('just-tapped', 'processing');
     card.replaceWith(newCard);
   }
 }
