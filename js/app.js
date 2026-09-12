@@ -118,7 +118,7 @@ function applyBeranda(d) {
 
 function formatTanggalIndo(iso) {
   if (!iso) return '-';
-  const d = new Date(iso + 'T00:00:00');
+  const d = new Date(String(iso).slice(0, 10) + 'T00:00:00');
   return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
