@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   bindEvents();
   refreshHalamanTransaksi();
-}
+});
 
 async function refreshHalamanTransaksi() {
   try {
@@ -28,7 +28,7 @@ async function refreshHalamanTransaksi() {
     katalog = res.data.katalog;
     renderKatalog();
   } catch (e) { /* toast sudah tampil */ }
-});
+}
 
 function bindEvents() {
   document.getElementById('btnLogout').addEventListener('click', async () => {
