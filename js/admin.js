@@ -53,6 +53,7 @@ function bindEvents() {
   document.getElementById('btnSimpanBarangMasuk').addEventListener('click', handleSimpanBarangMasuk);
   document.getElementById('bmProdukSelect').addEventListener('change', updateBmInfo);
   document.getElementById('btnLihatLaporan').addEventListener('click', refreshLaporan);
+  document.getElementById('btnSimpanPenyesuaian').addEventListener('click', handleSimpanPenyesuaian);
 
   document.getElementById('btnCloseModalForm').addEventListener('click', closeModalForm);
   document.getElementById('btnBatalModalForm').addEventListener('click', closeModalForm);
@@ -168,6 +169,7 @@ const TAB_LOADERS = {
   produk: refreshProduk,
   harga: refreshHargaTab,
   barangmasuk: refreshBarangMasukTab,
+  penyesuaian: refreshPenyesuaianTab,
   laporan: refreshLaporan,
   kas: refreshKas,
   riwayat: refreshAudit,
@@ -180,6 +182,7 @@ const TAB_ELEMENT_IDS = {
   produk: 'tabProduk',
   harga: 'tabHarga',
   barangmasuk: 'tabBarangMasuk',
+  penyesuaian: 'tabPenyesuaian',
   laporan: 'tabLaporan',
   kas: 'tabKas',
   riwayat: 'tabRiwayatPerubahan',
@@ -242,6 +245,30 @@ async function refreshPedagang() {
             : `<button class="link-btn" onclick="toggleStatusPedagang('${v.id}','Aktif')">Aktifkan</button>`}
         </td>
       </tr>`).join('') : emptyRow(4, 'Belum ada pedagang.');
+  } catch (e) { /* noop */ }
+  refreshVendorPayments();
+}
+
+async function refreshVendorPayments() {
+  try {
+    const res = await apiGet('getVendorPaymentsList');
+    const body = document.getElementById('vendorPaymentsBody');
+    body.innerHTML = res.data.length ? res.data.map(p => `
+      <tr>
+        <td>${formatTanggalIndoShort(p.tanggal)}</td>
+        <td>${escapeHtmlA(p.vendor_nama)}</td>
+        <td>${formatRupiah(p.total_pembayaran)}</td>
+        <td><span class="pill ${p.status === 'Dibayar' ? 'aktif' : 'selisih'}">${p.status}</span></td>
+        <td>${p.status === 'Menunggu' ? `<button class="link-btn" onclick="handleBayarPedagang('${p.id}')">Tandai Dibayar</button>` : '-'}</td>
+      </tr>`).join('') : emptyRow(5, 'Belum ada pembayaran pedagang.');
+  } catch (e) { /* noop */ }
+}
+
+async function handleBayarPedagang(paymentId) {
+  try {
+    await apiPost('bayarPedagang', { payment_id: paymentId });
+    showToast('Pembayaran ditandai selesai.');
+    refreshVendorPayments();
   } catch (e) { /* noop */ }
 }
 
@@ -528,6 +555,45 @@ async function refreshAudit() {
         <td>${escapeHtmlA(l.module)}</td>
         <td>${escapeHtmlA(l.reason || '-')}</td>
       </tr>`).join('') : emptyRow(5, 'Belum ada riwayat perubahan.');
+  } catch (e) { /* noop */ }
+}
+
+// ============================================================
+// PENYESUAIAN STOK
+// ============================================================
+async function refreshPenyesuaianTab() {
+  if (!produkListAdmin.length) await refreshProdukSilent();
+  const select = document.getElementById('adjProdukSelect');
+  select.innerHTML = produkListAdmin.filter(p => p.status === 'Aktif')
+    .map(p => `<option value="${p.id}">${escapeHtmlA(p.nama_produk)} (stok saat ini: ${p.stok})</option>`).join('');
+
+  try {
+    const res = await apiGet('getPenyesuaianStokList');
+    const body = document.getElementById('penyesuaianBody');
+    body.innerHTML = res.data.length ? res.data.map(r => `
+      <tr>
+        <td>${formatTanggalIndoShort(r.tanggal)}</td>
+        <td>${escapeHtmlA(r.nama_produk)}</td>
+        <td style="color:${r.jumlah < 0 ? 'var(--error)' : 'var(--status-available)'}">${r.jumlah > 0 ? '+' : ''}${r.jumlah}</td>
+        <td>${escapeHtmlA(r.alasan)}</td>
+        <td>${escapeHtmlA(r.dicatat_oleh)}</td>
+      </tr>`).join('') : emptyRow(5, 'Belum ada penyesuaian stok.');
+  } catch (e) { /* noop */ }
+}
+
+async function handleSimpanPenyesuaian() {
+  const productId = document.getElementById('adjProdukSelect').value;
+  const jumlah = Number(document.getElementById('adjJumlah').value);
+  const alasan = document.getElementById('adjAlasan').value.trim();
+  if (!productId || !jumlah) { showToast('Pilih produk dan isi jumlah penyesuaian.', 'error'); return; }
+  if (!alasan) { showToast('Isi alasan penyesuaian.', 'error'); return; }
+
+  try {
+    await apiPost('simpanPenyesuaianStok', { product_id: productId, jumlah: jumlah, alasan: alasan });
+    showToast('Penyesuaian stok tersimpan.');
+    document.getElementById('adjJumlah').value = '';
+    document.getElementById('adjAlasan').value = '';
+    refreshProdukSilent().then(refreshPenyesuaianTab);
   } catch (e) { /* noop */ }
 }
 

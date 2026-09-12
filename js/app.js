@@ -17,9 +17,17 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('userRole').textContent = Session_.role === 'admin' ? 'Admin' : 'Petugas Kantin';
 
   bindEvents();
-  refreshBeranda();
-  refreshKategori();
-  refreshKatalog();
+  refreshHalamanTransaksi();
+}
+
+async function refreshHalamanTransaksi() {
+  try {
+    const res = await apiGet('getHalamanTransaksi');
+    applyBeranda(res.data.beranda);
+    applyKategori(res.data.kategori);
+    katalog = res.data.katalog;
+    renderKatalog();
+  } catch (e) { /* toast sudah tampil */ }
 });
 
 function bindEvents() {
@@ -95,14 +103,17 @@ function switchTab(tab) {
 async function refreshBeranda() {
   try {
     const res = await apiGet('getBeranda');
-    const d = res.data;
-    document.getElementById('greeting').textContent = `Selamat Bertugas, ${d.petugas_nama}! 👋`;
-    document.getElementById('tanggalHariIni').textContent = formatTanggalIndo(d.tanggal);
-    document.getElementById('statPenjualan').textContent = formatRupiah(d.total_penjualan);
-    document.getElementById('statTerjual').textContent = `${d.barang_terjual} pcs`;
-    document.getElementById('statProduk').textContent = d.produk_siap_jual;
-    document.getElementById('statMenipis').textContent = d.stok_menipis;
+    applyBeranda(res.data);
   } catch (e) { /* toast sudah ditampilkan oleh apiGet */ }
+}
+
+function applyBeranda(d) {
+  document.getElementById('greeting').textContent = `Selamat Bertugas, ${d.petugas_nama}! 👋`;
+  document.getElementById('tanggalHariIni').textContent = formatTanggalIndo(d.tanggal);
+  document.getElementById('statPenjualan').textContent = formatRupiah(d.total_penjualan);
+  document.getElementById('statTerjual').textContent = `${d.barang_terjual} pcs`;
+  document.getElementById('statProduk').textContent = d.produk_siap_jual;
+  document.getElementById('statMenipis').textContent = d.stok_menipis;
 }
 
 function formatTanggalIndo(iso) {
@@ -117,19 +128,23 @@ function formatTanggalIndo(iso) {
 async function refreshKategori() {
   try {
     const res = await apiGet('getKategori');
-    kategoriList = res.data;
-    const strip = document.getElementById('categoryStrip');
-    strip.innerHTML = '<button class="chip active" data-cat="all">Semua</button>' +
-      kategoriList.map(c => `<button class="chip" data-cat="${c.id}">${escapeHtml(c.nama)}</button>`).join('');
-
-    strip.querySelectorAll('.chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        kategoriAktif = chip.dataset.cat;
-        strip.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === chip));
-        renderKatalog();
-      });
-    });
+    applyKategori(res.data);
   } catch (e) { /* noop */ }
+}
+
+function applyKategori(list) {
+  kategoriList = list;
+  const strip = document.getElementById('categoryStrip');
+  strip.innerHTML = '<button class="chip active" data-cat="all">Semua</button>' +
+    kategoriList.map(c => `<button class="chip" data-cat="${c.id}">${escapeHtml(c.nama)}</button>`).join('');
+
+  strip.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      kategoriAktif = chip.dataset.cat;
+      strip.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === chip));
+      renderKatalog();
+    });
+  });
 }
 
 // ============================================================

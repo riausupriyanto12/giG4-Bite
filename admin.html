@@ -26,6 +26,7 @@
       <button class="tab-btn" data-tab="produk">🍱 Produk</button>
       <button class="tab-btn" data-tab="harga">💰 Harga & Bagi Hasil</button>
       <button class="tab-btn" data-tab="barangmasuk">📥 Barang Masuk</button>
+      <button class="tab-btn" data-tab="penyesuaian">⚖️ Penyesuaian Stok</button>
       <button class="tab-btn" data-tab="laporan">📈 Laporan</button>
       <button class="tab-btn" data-tab="kas">🏦 Kas</button>
       <button class="tab-btn" data-tab="riwayat">🕒 Riwayat Perubahan</button>
@@ -56,10 +57,17 @@
     <!-- ============ PEDAGANG ============ -->
     <div id="tabPedagang" class="hidden">
       <div class="toolbar"><h2>Daftar Pedagang</h2><button class="btn-add" id="btnTambahPedagang">+ Tambah Pedagang</button></div>
-      <div class="table-wrap">
+      <div class="table-wrap" style="margin-bottom:1.5rem;">
         <table class="data-table">
           <thead><tr><th>Nama Pedagang</th><th>Status</th><th>Jumlah Produk</th><th>Aksi</th></tr></thead>
           <tbody id="pedagangBody"></tbody>
+        </table>
+      </div>
+      <div class="toolbar"><h2>Pembayaran ke Pedagang</h2></div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Tanggal</th><th>Pedagang</th><th>Jumlah</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="vendorPaymentsBody"></tbody>
         </table>
       </div>
     </div>
@@ -116,6 +124,28 @@
       </div>
       <button class="btn-primary" id="btnSimpanBarangMasuk" style="max-width:260px;">Simpan Barang Masuk</button>
       <p class="helper-text" id="bmInfo"></p>
+    </div>
+
+    <!-- ============ PENYESUAIAN STOK ============ -->
+    <div id="tabPenyesuaian" class="hidden">
+      <div class="toolbar"><h2>Penyesuaian Stok (Barang Rusak/Hilang/Koreksi)</h2></div>
+      <div class="form-field" style="max-width:360px;">
+        <label>Produk</label>
+        <select id="adjProdukSelect"></select>
+      </div>
+      <div class="form-row-2" style="max-width:500px;">
+        <div class="form-field"><label>Jumlah Penyesuaian</label><input type="number" id="adjJumlah" placeholder="mis. -2 (rusak) atau 5 (koreksi tambah)"></div>
+        <div class="form-field"><label>Alasan</label><input type="text" id="adjAlasan" placeholder="mis. jatuh & pecah, salah hitung"></div>
+      </div>
+      <button class="btn-primary" id="btnSimpanPenyesuaian" style="max-width:260px;">Simpan Penyesuaian</button>
+      <p class="helper-text">Isi angka negatif untuk mengurangi stok (rusak/hilang), positif untuk menambah (koreksi hitung).</p>
+      <div class="toolbar" style="margin-top:1.5rem;"><h2>Riwayat Penyesuaian</h2></div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Tanggal</th><th>Produk</th><th>Jumlah</th><th>Alasan</th><th>Oleh</th></tr></thead>
+          <tbody id="penyesuaianBody"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ============ LAPORAN ============ -->
