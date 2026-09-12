@@ -206,38 +206,44 @@ function placeholderImg(nama) {
 }
 
 // ============================================================
-// TAP PRODUK — update kartu terkait saja (bukan full re-render)
-// Kunci PER-PRODUK (bukan global) — tap produk lain tetap responsif
-// walau tap sebelumnya masih diproses server.
+// TAP PRODUK — Optimistic UI + Fire & Forget (lihat skill gas-instant-ux)
+// UI update INSTAN, sinkronisasi ke server jalan di background TANPA
+// menunggu (tidak ada "await" yang memblokir tap berikutnya). Ini penting
+// untuk kecepatan layanan kasir saat antrean ramai.
 // ============================================================
-const produkSedangDiproses = new Set();
+let berandaRefreshTimer = null;
 
-async function handleTap(productId) {
-  if (produkSedangDiproses.has(productId)) return; // cegah dobel-tap produk YANG SAMA
+function handleTap(productId) {
   const item = katalog.find(p => p.id === productId);
   if (!item || item.status_stok === 'Habis') return;
 
-  produkSedangDiproses.add(productId);
-  const clientEventId = `${Session_.token}-${productId}-${Date.now()}`;
-
-  // optimistic update lokal — langsung terasa responsif
+  // 1. UPDATE UI INSTAN (0ms) — tidak menunggu apa pun
   item.stok -= 1;
   item.terjual_hari_ini += 1;
-  updateCardInPlace(item, true);
+  updateCardInPlace(item, false);
+  flashTapFeedback(productId);
 
-  try {
-    await apiPost('tapProduk', { product_id: productId, client_event_id: clientEventId });
-    refreshBeranda();
-  } catch (e) {
-    // rollback jika gagal
-    item.stok += 1;
-    item.terjual_hari_ini -= 1;
-    updateCardInPlace(item, false);
-  } finally {
-    produkSedangDiproses.delete(productId);
-    const cardEl = document.querySelector(`.product-card[data-id="${productId}"]`);
-    if (cardEl) { cardEl.classList.remove('processing'); setTimeout(() => cardEl.classList.remove('just-tapped'), 250); }
-  }
+  // 2. SINKRONISASI KE SERVER DI BACKGROUND (fire & forget — TIDAK di-await)
+  const clientEventId = `${Session_.token}-${productId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  apiPost('tapProduk', { product_id: productId, client_event_id: clientEventId })
+    .then(() => {
+      clearTimeout(berandaRefreshTimer);
+      berandaRefreshTimer = setTimeout(refreshBeranda, 1000); // digabung, hindari spam request saat tap beruntun
+    })
+    .catch(() => {
+      // gagal di server (mis. stok ternyata sudah habis duluan oleh tap lain) — batalkan optimistic update
+      item.stok += 1;
+      item.terjual_hari_ini -= 1;
+      updateCardInPlace(item, false);
+      showToast(`Gagal menyimpan tap ${item.nama_produk}, stok dikembalikan.`, 'error');
+    });
+}
+
+function flashTapFeedback(productId) {
+  const cardEl = document.querySelector(`.product-card[data-id="${productId}"]`);
+  if (!cardEl) return;
+  cardEl.classList.add('just-tapped');
+  setTimeout(() => cardEl.classList.remove('just-tapped'), 250);
 }
 
 function updateCardInPlace(item, sedangDiproses) {
@@ -256,21 +262,35 @@ function updateCardInPlace(item, sedangDiproses) {
     temp.innerHTML = outerHtml;
     const newCard = temp.firstElementChild;
     newCard.addEventListener('click', () => handleTap(item.id));
-    if (sedangDiproses) newCard.classList.add('just-tapped', 'processing');
     card.replaceWith(newCard);
   }
 }
 
 // ============================================================
 // BATALKAN TAP TERAKHIR
+// Catatan: TETAP menunggu konfirmasi server (tidak fire-and-forget
+// seperti tap biasa) karena "batalkan" harus tahu PASTI item mana yang
+// dibatalkan server — salah tebak di sini bisa bikin stok/laporan keliru.
+// Tapi tetap dioptimalkan: hanya update 1 kartu, bukan muat ulang semua.
 // ============================================================
 async function handleUndo() {
+  const btn = document.getElementById('btnUndo');
+  btn.disabled = true;
   try {
     const res = await apiPost('batalkanTapTerakhir', {});
+    const item = katalog.find(p => p.id === res.data.product_id);
+    if (item) {
+      item.stok += 1;
+      item.terjual_hari_ini -= 1;
+      updateCardInPlace(item, false);
+    }
     showToast('Tap terakhir dibatalkan.');
-    await refreshKatalog();
-    await refreshBeranda();
-  } catch (e) { /* toast sudah tampil */ }
+    refreshBeranda();
+  } catch (e) {
+    /* toast sudah tampil */
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ============================================================

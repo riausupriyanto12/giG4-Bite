@@ -210,9 +210,6 @@ input { font-family: inherit; }
   border: none; font-size: 16px; display: flex; align-items: center; justify-content: center;
 }
 .product-card.just-tapped { animation: pulseTap .25s ease; }
-.product-card.processing { opacity: .7; pointer-events: none; }
-.product-card.processing .tap-btn { animation: spinTap .6s linear infinite; }
-@keyframes spinTap { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes pulseTap { 0% { box-shadow: 0 0 0 0 rgba(4,120,87,.35); } 100% { box-shadow: 0 0 0 8px rgba(4,120,87,0); } }
 
 /* ---------- BOTTOM DOCK ---------- */
