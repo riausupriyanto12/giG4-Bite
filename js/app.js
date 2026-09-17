@@ -6,6 +6,7 @@ let kategoriList = [];
 let kategoriAktif = 'all';
 let searchQuery = '';
 let sesiTerakhir = null; // hasil actionTutupTransaksi, dipakai saat simpan rekonsiliasi
+let berandaState = null; // referensi data beranda saat ini, dipakai untuk update optimistic statPenjualan/statTerjual
 
 // ============================================================
 // GUARD & INIT
@@ -126,12 +127,24 @@ async function refreshBeranda() {
 }
 
 function applyBeranda(d) {
+  berandaState = d;
   document.getElementById('greeting').textContent = `Selamat Bertugas, ${d.petugas_nama}! 👋`;
   document.getElementById('tanggalHariIni').textContent = formatTanggalIndo(d.tanggal);
   document.getElementById('statPenjualan').textContent = formatRupiah(d.total_penjualan);
   document.getElementById('statTerjual').textContent = `${d.barang_terjual} pcs`;
   document.getElementById('statProduk').textContent = d.produk_siap_jual;
   document.getElementById('statMenipis').textContent = d.stok_menipis;
+}
+
+// Update instan kotak Total Penjualan & Barang Terjual (tanpa menunggu
+// server) — dipanggil dari handleTap dan handleUndo supaya kedua kotak
+// ini ikut secepat kartu produk, bukan menunggu refreshBeranda().
+function updateBerandaStatsOptimistic(hargaDelta, itemDelta) {
+  if (!berandaState) return;
+  berandaState.total_penjualan += hargaDelta;
+  berandaState.barang_terjual += itemDelta;
+  document.getElementById('statPenjualan').textContent = formatRupiah(berandaState.total_penjualan);
+  document.getElementById('statTerjual').textContent = `${berandaState.barang_terjual} pcs`;
 }
 
 function formatTanggalIndo(iso) {
@@ -243,6 +256,7 @@ function handleTap(productId) {
   item.terjual_hari_ini += 1;
   updateCardInPlace(item, false);
   flashTapFeedback(productId);
+  updateBerandaStatsOptimistic(item.harga_jual, 1);
 
   // 2. SINKRONISASI KE SERVER DI BACKGROUND (fire & forget — TIDAK di-await)
   const clientEventId = `${Session_.token}-${productId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -256,6 +270,7 @@ function handleTap(productId) {
       item.stok += 1;
       item.terjual_hari_ini -= 1;
       updateCardInPlace(item, false);
+      updateBerandaStatsOptimistic(-item.harga_jual, -1);
       showToast(`Gagal menyimpan tap ${item.nama_produk}, stok dikembalikan.`, 'error');
     });
 }
@@ -304,6 +319,7 @@ async function handleUndo() {
       item.stok += 1;
       item.terjual_hari_ini -= 1;
       updateCardInPlace(item, false);
+      updateBerandaStatsOptimistic(-item.harga_jual, -1);
     }
     showToast('Tap terakhir dibatalkan.');
     refreshBeranda();
