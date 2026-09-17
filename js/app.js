@@ -20,9 +20,24 @@ document.addEventListener('DOMContentLoaded', () => {
   refreshHalamanTransaksi();
 });
 
+// Cache-first: begitu halaman dibuka, tampilkan katalog/beranda/kategori
+// dari kunjungan terakhir (localStorage) secara INSTAN, sambil data
+// terbaru ditarik diam-diam di belakang layar dan menggantikannya begitu
+// siap. Kalau belum pernah ada data tersimpan (login pertama di device
+// ini), tampilkan skeleton kartu produk, bukan grid kosong.
 async function refreshHalamanTransaksi() {
+  const { cached, fresh } = apiGetCached('getHalamanTransaksi');
+  if (cached && cached.success) {
+    applyBeranda(cached.data.beranda);
+    applyKategori(cached.data.kategori);
+    katalog = cached.data.katalog;
+    renderKatalog();
+  } else {
+    document.getElementById('productGrid').innerHTML = skeletonCards(6);
+  }
+
   try {
-    const res = await apiGet('getHalamanTransaksi');
+    const res = await fresh;
     applyBeranda(res.data.beranda);
     applyKategori(res.data.kategori);
     katalog = res.data.katalog;
@@ -99,6 +114,9 @@ function switchTab(tab) {
 
 // ============================================================
 // BERANDA
+// Dipanggil sebagai penyegaran SETELAH aksi (tap/undo/tutup transaksi) —
+// sengaja TIDAK dipasangi cache-first, karena di sini angkanya harus
+// selalu yang paling baru, bukan data lama.
 // ============================================================
 async function refreshBeranda() {
   try {
@@ -149,6 +167,8 @@ function applyKategori(list) {
 
 // ============================================================
 // KATALOG PRODUK
+// refreshKatalog() dipanggil sebagai penyegaran SETELAH tutup transaksi
+// (stok berubah) — sengaja TIDAK cache-first, harus data paling baru.
 // ============================================================
 async function refreshKatalog() {
   try {
@@ -207,9 +227,10 @@ function placeholderImg(nama) {
 
 // ============================================================
 // TAP PRODUK — Optimistic UI + Fire & Forget (lihat skill gas-instant-ux)
-// UI update INSTAN, sinkronisasi ke server jalan di background TANPA
-// menunggu (tidak ada "await" yang memblokir tap berikutnya). Ini penting
-// untuk kecepatan layanan kasir saat antrean ramai.
+// TIDAK DIUBAH. UI update INSTAN, sinkronisasi ke server jalan di
+// background TANPA menunggu (tidak ada "await" yang memblokir tap
+// berikutnya). Ini penting untuk kecepatan layanan kasir saat antrean
+// ramai.
 // ============================================================
 let berandaRefreshTimer = null;
 
@@ -267,7 +288,7 @@ function updateCardInPlace(item, sedangDiproses) {
 }
 
 // ============================================================
-// BATALKAN TAP TERAKHIR
+// BATALKAN TAP TERAKHIR — TIDAK DIUBAH.
 // Catatan: TETAP menunggu konfirmasi server (tidak fire-and-forget
 // seperti tap biasa) karena "batalkan" harus tahu PASTI item mana yang
 // dibatalkan server — salah tebak di sini bisa bikin stok/laporan keliru.
@@ -294,7 +315,7 @@ async function handleUndo() {
 }
 
 // ============================================================
-// TUTUP TRANSAKSI & REKONSILIASI
+// TUTUP TRANSAKSI & REKONSILIASI — TIDAK DIUBAH.
 // ============================================================
 async function openModalTutup() {
   try {
@@ -368,21 +389,33 @@ function initials(nama) {
 
 // ============================================================
 // RIWAYAT
+// Cache-first sama seperti Admin Panel: tampilkan riwayat terakhir yang
+// tersimpan secara instan, sambil data terbaru diambil di belakang layar.
 // ============================================================
 async function refreshRiwayat() {
+  const { cached, fresh } = apiGetCached('getRiwayat');
+  if (cached && cached.success) {
+    renderRiwayat(cached.data);
+  } else {
+    document.getElementById('riwayatList').innerHTML = skeletonList(4);
+  }
   try {
-    const res = await apiGet('getRiwayat');
-    const list = document.getElementById('riwayatList');
-    document.getElementById('emptyRiwayat').classList.toggle('hidden', res.data.length > 0);
-    list.innerHTML = res.data.map(t => `
-      <div class="riwayat-item ${t.status === 'Dibatalkan' ? 'dibatalkan' : ''}">
-        <div>
-          <div class="nama">${escapeHtml(t.nama_produk)} ${t.quantity > 1 ? '× ' + t.quantity : ''}</div>
-          <div class="waktu">${new Date(t.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
-        </div>
-        <div class="harga">${formatRupiah(t.unit_price * t.quantity)}</div>
-      </div>`).join('');
+    const res = await fresh;
+    renderRiwayat(res.data);
   } catch (e) { /* noop */ }
+}
+
+function renderRiwayat(data) {
+  const list = document.getElementById('riwayatList');
+  document.getElementById('emptyRiwayat').classList.toggle('hidden', data.length > 0);
+  list.innerHTML = data.map(t => `
+    <div class="riwayat-item ${t.status === 'Dibatalkan' ? 'dibatalkan' : ''}">
+      <div>
+        <div class="nama">${escapeHtml(t.nama_produk)} ${t.quantity > 1 ? '× ' + t.quantity : ''}</div>
+        <div class="waktu">${new Date(t.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
+      </div>
+      <div class="harga">${formatRupiah(t.unit_price * t.quantity)}</div>
+    </div>`).join('');
 }
 
 // ============================================================
