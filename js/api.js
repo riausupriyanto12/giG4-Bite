@@ -71,3 +71,35 @@ function formatRupiah(angka) {
   const sign = n < 0 ? '-' : '';
   return sign + 'Rp' + Math.abs(n).toLocaleString('id-ID');
 }
+
+// ============================================================
+// CACHE-FIRST GET
+// Tampilkan data lama dari localStorage secara instan (jika ada),
+// sambil tetap ambil data terbaru dari server di belakang layar.
+// Pemanggil WAJIB tetap menunggu `fresh` dan merender ulang saat
+// selesai, supaya data yang tampil selalu benar & terkini.
+// ============================================================
+function apiGetCached(action, extraParams) {
+  const cacheKey = 'gig4_cache_' + action + '_' + JSON.stringify(extraParams || {});
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch (e) { cached = null; }
+
+  const fresh = apiGet(action, extraParams).then(json => {
+    try { localStorage.setItem(cacheKey, JSON.stringify(json)); } catch (e) { /* storage penuh/private mode, abaikan */ }
+    return json;
+  });
+
+  return { cached, fresh };
+}
+
+// ============================================================
+// SKELETON LOADING
+// Baris placeholder abu-abu berdenyut, dipakai menggantikan tabel
+// kosong selama menunggu data pertama kali (belum ada cache).
+// ============================================================
+function skeletonRows(cols, rows) {
+  rows = rows || 3;
+  const cell = '<td><div class="skeleton-bar"></div></td>';
+  const row = `<tr class="skeleton-row">${cell.repeat(cols)}</tr>`;
+  return row.repeat(rows);
+}

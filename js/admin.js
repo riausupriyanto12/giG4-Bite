@@ -19,9 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('lapSampai').value = new Date().toISOString().slice(0, 10);
 
   bindEvents();
-  loadMasterData().then(() => {
-    switchTab('dashboard');
-  });
+  // Master data (kategori & pedagang untuk dropdown) dan tab pertama
+  // dijalankan BARENGAN, bukan berurutan — supaya tab pertama tidak
+  // ikut menunggu master data selesai lebih dulu.
+  loadMasterData();
+  switchTab('dashboard');
 });
 
 async function loadMasterData() {
@@ -65,24 +67,35 @@ function bindEvents() {
 // AKUN
 // ============================================================
 async function refreshAkun() {
+  const body = document.getElementById('akunBody');
+  const { cached, fresh } = apiGetCached('getAkunList');
+  if (cached && cached.success) {
+    renderAkunBody(cached.data);
+  } else {
+    body.innerHTML = skeletonRows(5, 3);
+  }
   try {
-    const res = await apiGet('getAkunList');
-    const body = document.getElementById('akunBody');
-    body.innerHTML = res.data.length ? res.data.map(u => `
-      <tr>
-        <td>${escapeHtmlA(u.nama)}</td>
-        <td>${escapeHtmlA(u.username)}</td>
-        <td><span class="pill ${u.role === 'admin' ? 'sesuai' : 'aktif'}">${u.role === 'admin' ? 'Admin' : 'Petugas'}</span></td>
-        <td><span class="pill ${u.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${u.status}</span></td>
-        <td>
-          <button class="link-btn" onclick='openFormAkun(${JSON.stringify(u)})'>Edit</button>
-          <button class="link-btn" onclick='openFormResetPassword(${JSON.stringify(u)})'>Reset Password</button>
-          ${u.status === 'Aktif'
-            ? `<button class="link-btn" style="color:var(--error)" onclick="toggleStatusAkun('${u.id}','${escapeHtmlA(u.nama)}','${u.role}','Nonaktif')">Nonaktifkan</button>`
-            : `<button class="link-btn" onclick="toggleStatusAkun('${u.id}','${escapeHtmlA(u.nama)}','${u.role}','Aktif')">Aktifkan</button>`}
-        </td>
-      </tr>`).join('') : emptyRow(5, 'Belum ada akun.');
+    const res = await fresh;
+    renderAkunBody(res.data);
   } catch (e) { /* noop */ }
+}
+
+function renderAkunBody(data) {
+  const body = document.getElementById('akunBody');
+  body.innerHTML = data.length ? data.map(u => `
+    <tr>
+      <td>${escapeHtmlA(u.nama)}</td>
+      <td>${escapeHtmlA(u.username)}</td>
+      <td><span class="pill ${u.role === 'admin' ? 'sesuai' : 'aktif'}">${u.role === 'admin' ? 'Admin' : 'Petugas'}</span></td>
+      <td><span class="pill ${u.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${u.status}</span></td>
+      <td>
+        <button class="link-btn" onclick='openFormAkun(${JSON.stringify(u)})'>Edit</button>
+        <button class="link-btn" onclick='openFormResetPassword(${JSON.stringify(u)})'>Reset Password</button>
+        ${u.status === 'Aktif'
+          ? `<button class="link-btn" style="color:var(--error)" onclick="toggleStatusAkun('${u.id}','${escapeHtmlA(u.nama)}','${u.role}','Nonaktif')">Nonaktifkan</button>`
+          : `<button class="link-btn" onclick="toggleStatusAkun('${u.id}','${escapeHtmlA(u.nama)}','${u.role}','Aktif')">Aktifkan</button>`}
+      </td>
+    </tr>`).join('') : emptyRow(5, 'Belum ada akun.');
 }
 
 function openFormAkun(akun) {
@@ -202,66 +215,98 @@ function switchTab(tab) {
 // DASHBOARD
 // ============================================================
 async function refreshDashboard() {
+  const { cached, fresh } = apiGetCached('getDashboardAdmin');
+  if (cached && cached.success) {
+    renderDashboard(cached.data);
+  } else {
+    document.getElementById('dSesiBody').innerHTML = skeletonRows(4, 3);
+  }
   try {
-    const res = await apiGet('getDashboardAdmin');
-    const d = res.data;
-    document.getElementById('dOmsetSemua').textContent = formatRupiah(d.total_omset_semua);
-    document.getElementById('dOmsetHariIni').textContent = formatRupiah(d.omset_hari_ini);
-    document.getElementById('dProdukAktif').textContent = d.produk_aktif;
-    document.getElementById('dVendorAktif').textContent = d.vendor_aktif;
-    document.getElementById('dStokMenipis').textContent = d.stok_menipis;
-    document.getElementById('dStokHabis').textContent = d.stok_habis;
-    document.getElementById('dRekonSelisih').textContent = d.rekon_selisih;
-    document.getElementById('dItemSemua').textContent = d.total_item_semua;
-
-    const body = document.getElementById('dSesiBody');
-    body.innerHTML = d.sesi_terbaru.length ? d.sesi_terbaru.map(s => `
-      <tr>
-        <td>${formatTanggalIndoShort(s.tanggal)}</td>
-        <td><span class="pill ${s.status === 'Selesai' ? 'aktif' : 'nonaktif'}">${s.status}</span></td>
-        <td>${s.total_item} pcs</td>
-        <td>${formatRupiah(s.total_sistem)}</td>
-      </tr>`).join('') : emptyRow(4, 'Belum ada sesi.');
+    const res = await fresh;
+    renderDashboard(res.data);
   } catch (e) { /* noop */ }
+}
+
+function renderDashboard(d) {
+  document.getElementById('dOmsetSemua').textContent = formatRupiah(d.total_omset_semua);
+  document.getElementById('dOmsetHariIni').textContent = formatRupiah(d.omset_hari_ini);
+  document.getElementById('dProdukAktif').textContent = d.produk_aktif;
+  document.getElementById('dVendorAktif').textContent = d.vendor_aktif;
+  document.getElementById('dStokMenipis').textContent = d.stok_menipis;
+  document.getElementById('dStokHabis').textContent = d.stok_habis;
+  document.getElementById('dRekonSelisih').textContent = d.rekon_selisih;
+  document.getElementById('dItemSemua').textContent = d.total_item_semua;
+
+  const body = document.getElementById('dSesiBody');
+  body.innerHTML = d.sesi_terbaru.length ? d.sesi_terbaru.map(s => `
+    <tr>
+      <td>${formatTanggalIndoShort(s.tanggal)}</td>
+      <td><span class="pill ${s.status === 'Selesai' ? 'aktif' : 'nonaktif'}">${s.status}</span></td>
+      <td>${s.total_item} pcs</td>
+      <td>${formatRupiah(s.total_sistem)}</td>
+    </tr>`).join('') : emptyRow(4, 'Belum ada sesi.');
 }
 
 // ============================================================
 // PEDAGANG
 // ============================================================
 async function refreshPedagang() {
+  const body = document.getElementById('pedagangBody');
+  const { cached, fresh } = apiGetCached('getPedagangList');
+  if (cached && cached.success) {
+    vendorListAdmin = cached.data;
+    renderPedagangBody();
+  } else {
+    body.innerHTML = skeletonRows(4, 3);
+  }
   try {
-    const res = await apiGet('getPedagangList');
+    const res = await fresh;
     vendorListAdmin = res.data;
-    const body = document.getElementById('pedagangBody');
-    body.innerHTML = vendorListAdmin.length ? vendorListAdmin.map(v => `
-      <tr>
-        <td>${escapeHtmlA(v.nama_pedagang)}</td>
-        <td><span class="pill ${v.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${v.status}</span></td>
-        <td>${v.jumlah_produk}</td>
-        <td>
-          <button class="link-btn" onclick='openFormPedagang(${JSON.stringify(v)})'>Edit</button>
-          ${v.status === 'Aktif'
-            ? `<button class="link-btn" style="color:var(--error)" onclick="toggleStatusPedagang('${v.id}','Nonaktif')">Nonaktifkan</button>`
-            : `<button class="link-btn" onclick="toggleStatusPedagang('${v.id}','Aktif')">Aktifkan</button>`}
-        </td>
-      </tr>`).join('') : emptyRow(4, 'Belum ada pedagang.');
+    renderPedagangBody();
   } catch (e) { /* noop */ }
   refreshVendorPayments();
 }
 
+function renderPedagangBody() {
+  const body = document.getElementById('pedagangBody');
+  body.innerHTML = vendorListAdmin.length ? vendorListAdmin.map(v => `
+    <tr>
+      <td>${escapeHtmlA(v.nama_pedagang)}</td>
+      <td><span class="pill ${v.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${v.status}</span></td>
+      <td>${v.jumlah_produk}</td>
+      <td>
+        <button class="link-btn" onclick='openFormPedagang(${JSON.stringify(v)})'>Edit</button>
+        ${v.status === 'Aktif'
+          ? `<button class="link-btn" style="color:var(--error)" onclick="toggleStatusPedagang('${v.id}','Nonaktif')">Nonaktifkan</button>`
+          : `<button class="link-btn" onclick="toggleStatusPedagang('${v.id}','Aktif')">Aktifkan</button>`}
+      </td>
+    </tr>`).join('') : emptyRow(4, 'Belum ada pedagang.');
+}
+
 async function refreshVendorPayments() {
+  const body = document.getElementById('vendorPaymentsBody');
+  const { cached, fresh } = apiGetCached('getVendorPaymentsList');
+  if (cached && cached.success) {
+    renderVendorPaymentsBody(cached.data);
+  } else {
+    body.innerHTML = skeletonRows(5, 2);
+  }
   try {
-    const res = await apiGet('getVendorPaymentsList');
-    const body = document.getElementById('vendorPaymentsBody');
-    body.innerHTML = res.data.length ? res.data.map(p => `
-      <tr>
-        <td>${formatTanggalIndoShort(p.tanggal)}</td>
-        <td>${escapeHtmlA(p.vendor_nama)}</td>
-        <td>${formatRupiah(p.total_pembayaran)}</td>
-        <td><span class="pill ${p.status === 'Dibayar' ? 'aktif' : 'selisih'}">${p.status}</span></td>
-        <td>${p.status === 'Menunggu' ? `<button class="link-btn" onclick="handleBayarPedagang('${p.id}')">Tandai Dibayar</button>` : '-'}</td>
-      </tr>`).join('') : emptyRow(5, 'Belum ada pembayaran pedagang.');
+    const res = await fresh;
+    renderVendorPaymentsBody(res.data);
   } catch (e) { /* noop */ }
+}
+
+function renderVendorPaymentsBody(data) {
+  const body = document.getElementById('vendorPaymentsBody');
+  body.innerHTML = data.length ? data.map(p => `
+    <tr>
+      <td>${formatTanggalIndoShort(p.tanggal)}</td>
+      <td>${escapeHtmlA(p.vendor_nama)}</td>
+      <td>${formatRupiah(p.total_pembayaran)}</td>
+      <td><span class="pill ${p.status === 'Dibayar' ? 'aktif' : 'selisih'}">${p.status}</span></td>
+      <td>${p.status === 'Menunggu' ? `<button class="link-btn" onclick="handleBayarPedagang('${p.id}')">Tandai Dibayar</button>` : '-'}</td>
+    </tr>`).join('') : emptyRow(5, 'Belum ada pembayaran pedagang.');
 }
 
 async function handleBayarPedagang(paymentId) {
@@ -298,26 +343,38 @@ async function toggleStatusPedagang(id, status) {
 // PRODUK
 // ============================================================
 async function refreshProduk() {
+  const body = document.getElementById('produkBody');
+  const { cached, fresh } = apiGetCached('getProdukAdminList');
+  if (cached && cached.success) {
+    produkListAdmin = cached.data;
+    renderProdukBody();
+  } else {
+    body.innerHTML = skeletonRows(7, 3);
+  }
   try {
-    const res = await apiGet('getProdukAdminList');
+    const res = await fresh;
     produkListAdmin = res.data;
-    const body = document.getElementById('produkBody');
-    body.innerHTML = produkListAdmin.length ? produkListAdmin.map(p => `
-      <tr>
-        <td>${escapeHtmlA(p.nama_produk)}</td>
-        <td>${escapeHtmlA(p.kategori_nama)}</td>
-        <td>${p.pemilik_type === 'pedagang' ? escapeHtmlA(p.vendor_nama) : 'Sekolah'}</td>
-        <td>${formatRupiah(p.harga_jual)}</td>
-        <td>${p.stok}</td>
-        <td><span class="pill ${p.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${p.status}</span></td>
-        <td>
-          <button class="link-btn" onclick='openFormProduk(${JSON.stringify(p)})'>Edit</button>
-          ${p.status === 'Aktif'
-            ? `<button class="link-btn" style="color:var(--error)" onclick="toggleStatusProduk('${p.id}','Nonaktif')">Nonaktifkan</button>`
-            : `<button class="link-btn" onclick="toggleStatusProduk('${p.id}','Aktif')">Aktifkan</button>`}
-        </td>
-      </tr>`).join('') : emptyRow(7, 'Belum ada produk.');
+    renderProdukBody();
   } catch (e) { /* noop */ }
+}
+
+function renderProdukBody() {
+  const body = document.getElementById('produkBody');
+  body.innerHTML = produkListAdmin.length ? produkListAdmin.map(p => `
+    <tr>
+      <td>${escapeHtmlA(p.nama_produk)}</td>
+      <td>${escapeHtmlA(p.kategori_nama)}</td>
+      <td>${p.pemilik_type === 'pedagang' ? escapeHtmlA(p.vendor_nama) : 'Sekolah'}</td>
+      <td>${formatRupiah(p.harga_jual)}</td>
+      <td>${p.stok}</td>
+      <td><span class="pill ${p.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${p.status}</span></td>
+      <td>
+        <button class="link-btn" onclick='openFormProduk(${JSON.stringify(p)})'>Edit</button>
+        ${p.status === 'Aktif'
+          ? `<button class="link-btn" style="color:var(--error)" onclick="toggleStatusProduk('${p.id}','Nonaktif')">Nonaktifkan</button>`
+          : `<button class="link-btn" onclick="toggleStatusProduk('${p.id}','Aktif')">Aktifkan</button>`}
+      </td>
+    </tr>`).join('') : emptyRow(7, 'Belum ada produk.');
 }
 
 function openFormProduk(produk) {
@@ -420,6 +477,7 @@ async function onHargaProdukChange() {
   document.getElementById('hHargaJual').value = '';
   document.getElementById('hHakPedagang').value = 0;
   document.getElementById('hBagianSekolah').value = '';
+  document.getElementById('hargaHistoryBody').innerHTML = skeletonRows(5, 2);
 
   try {
     const res = await apiGet('getHargaByProduk', { product_id: productId });
@@ -502,6 +560,8 @@ async function handleSimpanBarangMasuk() {
 async function refreshLaporan() {
   const dari = document.getElementById('lapDari').value;
   const sampai = document.getElementById('lapSampai').value;
+  document.getElementById('lapHarianBody').innerHTML = skeletonRows(3, 3);
+  document.getElementById('lapProdukBody').innerHTML = skeletonRows(3, 3);
   try {
     const res = await apiGet('getLaporanPenjualan', { dari, sampai });
     const d = res.data;
@@ -524,20 +584,31 @@ async function refreshLaporan() {
 // KAS
 // ============================================================
 async function refreshKas() {
+  const body = document.getElementById('kasBody');
+  const { cached, fresh } = apiGetCached('getKasList');
+  if (cached && cached.success) {
+    renderKas(cached.data);
+  } else {
+    body.innerHTML = skeletonRows(6, 3);
+  }
   try {
-    const res = await apiGet('getKasList');
-    document.getElementById('kasSaldoAkhir').textContent = formatRupiah(res.data.saldo_akhir);
-    const body = document.getElementById('kasBody');
-    body.innerHTML = res.data.rows.length ? res.data.rows.map(r => `
-      <tr>
-        <td>${formatTanggalIndoShort(r.tanggal)}</td>
-        <td>${escapeHtmlA(r.jenis)}</td>
-        <td>${escapeHtmlA(r.keterangan)}</td>
-        <td style="color:var(--status-available)">${r.masuk ? formatRupiah(r.masuk) : '-'}</td>
-        <td style="color:var(--error)">${r.keluar ? formatRupiah(r.keluar) : '-'}</td>
-        <td><strong>${formatRupiah(r.saldo_berjalan)}</strong></td>
-      </tr>`).join('') : emptyRow(6, 'Belum ada transaksi kas.');
+    const res = await fresh;
+    renderKas(res.data);
   } catch (e) { /* noop */ }
+}
+
+function renderKas(data) {
+  document.getElementById('kasSaldoAkhir').textContent = formatRupiah(data.saldo_akhir);
+  const body = document.getElementById('kasBody');
+  body.innerHTML = data.rows.length ? data.rows.map(r => `
+    <tr>
+      <td>${formatTanggalIndoShort(r.tanggal)}</td>
+      <td>${escapeHtmlA(r.jenis)}</td>
+      <td>${escapeHtmlA(r.keterangan)}</td>
+      <td style="color:var(--status-available)">${r.masuk ? formatRupiah(r.masuk) : '-'}</td>
+      <td style="color:var(--error)">${r.keluar ? formatRupiah(r.keluar) : '-'}</td>
+      <td><strong>${formatRupiah(r.saldo_berjalan)}</strong></td>
+    </tr>`).join('') : emptyRow(6, 'Belum ada transaksi kas.');
 }
 
 function openFormKas() {
@@ -568,18 +639,29 @@ function openFormKas() {
 // RIWAYAT PERUBAHAN (AUDIT LOG)
 // ============================================================
 async function refreshAudit() {
+  const body = document.getElementById('auditBody');
+  const { cached, fresh } = apiGetCached('getAuditLog', { limit: 150 });
+  if (cached && cached.success) {
+    renderAuditBody(cached.data);
+  } else {
+    body.innerHTML = skeletonRows(5, 4);
+  }
   try {
-    const res = await apiGet('getAuditLog', { limit: 150 });
-    const body = document.getElementById('auditBody');
-    body.innerHTML = res.data.length ? res.data.map(l => `
-      <tr>
-        <td>${new Date(l.timestamp).toLocaleString('id-ID')}</td>
-        <td>${escapeHtmlA(l.user_nama)}</td>
-        <td>${escapeHtmlA(l.action)}</td>
-        <td>${escapeHtmlA(l.module)}</td>
-        <td>${escapeHtmlA(l.reason || '-')}</td>
-      </tr>`).join('') : emptyRow(5, 'Belum ada riwayat perubahan.');
+    const res = await fresh;
+    renderAuditBody(res.data);
   } catch (e) { /* noop */ }
+}
+
+function renderAuditBody(data) {
+  const body = document.getElementById('auditBody');
+  body.innerHTML = data.length ? data.map(l => `
+    <tr>
+      <td>${new Date(l.timestamp).toLocaleString('id-ID')}</td>
+      <td>${escapeHtmlA(l.user_nama)}</td>
+      <td>${escapeHtmlA(l.action)}</td>
+      <td>${escapeHtmlA(l.module)}</td>
+      <td>${escapeHtmlA(l.reason || '-')}</td>
+    </tr>`).join('') : emptyRow(5, 'Belum ada riwayat perubahan.');
 }
 
 // ============================================================
@@ -591,18 +673,29 @@ async function refreshPenyesuaianTab() {
   select.innerHTML = produkListAdmin.filter(p => p.status === 'Aktif')
     .map(p => `<option value="${p.id}">${escapeHtmlA(p.nama_produk)} (stok saat ini: ${p.stok})</option>`).join('');
 
+  const body = document.getElementById('penyesuaianBody');
+  const { cached, fresh } = apiGetCached('getPenyesuaianStokList');
+  if (cached && cached.success) {
+    renderPenyesuaianBody(cached.data);
+  } else {
+    body.innerHTML = skeletonRows(5, 3);
+  }
   try {
-    const res = await apiGet('getPenyesuaianStokList');
-    const body = document.getElementById('penyesuaianBody');
-    body.innerHTML = res.data.length ? res.data.map(r => `
-      <tr>
-        <td>${formatTanggalIndoShort(r.tanggal)}</td>
-        <td>${escapeHtmlA(r.nama_produk)}</td>
-        <td style="color:${r.jumlah < 0 ? 'var(--error)' : 'var(--status-available)'}">${r.jumlah > 0 ? '+' : ''}${r.jumlah}</td>
-        <td>${escapeHtmlA(r.alasan)}</td>
-        <td>${escapeHtmlA(r.dicatat_oleh)}</td>
-      </tr>`).join('') : emptyRow(5, 'Belum ada penyesuaian stok.');
+    const res = await fresh;
+    renderPenyesuaianBody(res.data);
   } catch (e) { /* noop */ }
+}
+
+function renderPenyesuaianBody(data) {
+  const body = document.getElementById('penyesuaianBody');
+  body.innerHTML = data.length ? data.map(r => `
+    <tr>
+      <td>${formatTanggalIndoShort(r.tanggal)}</td>
+      <td>${escapeHtmlA(r.nama_produk)}</td>
+      <td style="color:${r.jumlah < 0 ? 'var(--error)' : 'var(--status-available)'}">${r.jumlah > 0 ? '+' : ''}${r.jumlah}</td>
+      <td>${escapeHtmlA(r.alasan)}</td>
+      <td>${escapeHtmlA(r.dicatat_oleh)}</td>
+    </tr>`).join('') : emptyRow(5, 'Belum ada penyesuaian stok.');
 }
 
 async function handleSimpanPenyesuaian() {
@@ -664,9 +757,6 @@ function closeModalForm() {
   document.getElementById('modalForm').classList.add('hidden');
 }
 
-// ============================================================
-// UTIL
-// ============================================================
 // ============================================================
 // UTIL
 // ============================================================
